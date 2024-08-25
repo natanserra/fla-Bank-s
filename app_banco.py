@@ -6,85 +6,85 @@ from pathlib import Path
 load_dotenv()
 
 # Defina um caminho padrão caso a variável de ambiente não esteja configurada
-DEFAULT_USER_SENHA_PATH = 'users.csv'
-USER_SENHA_PATH = os.getenv('user_senha', DEFAULT_USER_SENHA_PATH)
+CAMINHO_PADRAO_USUARIOS_SENHAS = 'usuarios.csv'
+CAMINHO_USUARIOS_SENHAS = os.getenv('user_senha', CAMINHO_PADRAO_USUARIOS_SENHAS)
 
 # Use um caminho relativo para o arquivo de informações
-INFOS_PATH = Path('infos.csv')
+CAMINHO_INFOS = Path('infos.csv')
 
-def load_user_data():
+def carregar_dados_usuarios():
     try:
-        return pd.read_csv(USER_SENHA_PATH, sep=';')
+        return pd.read_csv(CAMINHO_USUARIOS_SENHAS, sep=';')
     except FileNotFoundError:
-        print(f"Arquivo de usuários não encontrado: {USER_SENHA_PATH}")
+        print(f"Arquivo de usuários não encontrado: {CAMINHO_USUARIOS_SENHAS}")
         print("Criando um novo arquivo de usuários...")
         df = pd.DataFrame({'Usuário': [], 'Senha': []})
-        df.to_csv(USER_SENHA_PATH, sep=';', index=False)
+        df.to_csv(CAMINHO_USUARIOS_SENHAS, sep=';', index=False)
         return df
 
-def load_account_data():
+def carregar_dados_conta():
     try:
-        return pd.read_csv(INFOS_PATH, sep=';')
+        return pd.read_csv(CAMINHO_INFOS, sep=';')
     except FileNotFoundError:
-        print(f"Arquivo de informações não encontrado: {INFOS_PATH}")
+        print(f"Arquivo de informações não encontrado: {CAMINHO_INFOS}")
         print("Criando um novo arquivo de informações...")
         df = pd.DataFrame({'Usuário': [], 'Saldo': []})
-        df.to_csv(INFOS_PATH, sep=';', index=False)
+        df.to_csv(CAMINHO_INFOS, sep=';', index=False)
         return df
 
-def save_account_data(df):
-    df.to_csv(INFOS_PATH, sep=';', index=False)
+def salvar_dados_conta(df):
+    df.to_csv(CAMINHO_INFOS, sep=';', index=False)
 
 def login():
-    user_senha = load_user_data()
+    usuarios_senhas = carregar_dados_usuarios()
     print("| ------------------------- |")
     print("| BEM-VINDO(A) AO FlaBank's! |")
     print("| ------------------------- |")
     
     while True:
         try:
-            user = int(input('* Digite o usuário: '))
+            usuario = int(input('* Digite o usuário: '))
             senha = input('* Digite a senha: ')
 
-            if user_senha.empty:
+            if usuarios_senhas.empty:
                 print("Nenhum usuário cadastrado. Criando novo usuário...")
-                new_user = pd.DataFrame({'Usuário': [user], 'Senha': [senha]})
-                user_senha = pd.concat([user_senha, new_user], ignore_index=True)
-                user_senha.to_csv(USER_SENHA_PATH, sep=';', index=False)
+                novo_usuario = pd.DataFrame({'Usuário': [usuario], 'Senha': [senha]})
+                usuarios_senhas = pd.concat([usuarios_senhas, novo_usuario], ignore_index=True)
+                usuarios_senhas.to_csv(CAMINHO_USUARIOS_SENHAS, sep=';', index=False)
                 print("Usuário criado com sucesso!")
-                return user
+                return usuario
 
-            if ((user_senha['Usuário'] == user) & (user_senha['Senha'] == senha)).any():
+            if ((usuarios_senhas['Usuário'] == usuario) & (usuarios_senhas['Senha'] == senha)).any():
                 print('Login efetuado\n')
-                return user
+                return usuario
             else:
                 print('\nUsuário ou senha incorretos, tente novamente.\n')
         except ValueError:
             print('\nOpção inválida, utilize somente números para o usuário. Por favor, tente novamente.\n')
 
-def get_balance(user):
-    user_data = load_account_data()
-    user_row = user_data[user_data['Usuário'] == user]
-    if user_row.empty:
+def obter_saldo(usuario):
+    dados_conta = carregar_dados_conta()
+    linha_usuario = dados_conta[dados_conta['Usuário'] == usuario]
+    if linha_usuario.empty:
         # Se o usuário não existe no arquivo de informações, adicione-o com saldo zero
-        new_user = pd.DataFrame({'Usuário': [user], 'Saldo': [0.0]})
-        user_data = pd.concat([user_data, new_user], ignore_index=True)
-        save_account_data(user_data)
+        novo_usuario = pd.DataFrame({'Usuário': [usuario], 'Saldo': [0.0]})
+        dados_conta = pd.concat([dados_conta, novo_usuario], ignore_index=True)
+        salvar_dados_conta(dados_conta)
         return 0.0
-    return user_row['Saldo'].values[0]
+    return linha_usuario['Saldo'].values[0]
 
-def update_balance(user, new_balance):
-    user_data = load_account_data()
-    if user not in user_data['Usuário'].values:
+def atualizar_saldo(usuario, novo_saldo):
+    dados_conta = carregar_dados_conta()
+    if usuario not in dados_conta['Usuário'].values:
         # Se o usuário não existe, adicione-o
-        new_user = pd.DataFrame({'Usuário': [user], 'Saldo': [new_balance]})
-        user_data = pd.concat([user_data, new_user], ignore_index=True)
+        novo_usuario = pd.DataFrame({'Usuário': [usuario], 'Saldo': [novo_saldo]})
+        dados_conta = pd.concat([dados_conta, novo_usuario], ignore_index=True)
     else:
-        user_data.loc[user_data['Usuário'] == user, 'Saldo'] = new_balance
-    save_account_data(user_data)
+        dados_conta.loc[dados_conta['Usuário'] == usuario, 'Saldo'] = novo_saldo
+    salvar_dados_conta(dados_conta)
 
-def deposit(user):
-    current_balance = get_balance(user)
+def deposito(usuario):
+    saldo_atual = obter_saldo(usuario)
     while True:
         try:
             valor = float(input('Digite o valor de depósito: '))
@@ -97,8 +97,8 @@ def deposit(user):
             
             confirmacao = input('Deseja continuar? (S/N): ').upper().strip()
             if confirmacao == 'S':
-                new_balance = current_balance + valor
-                update_balance(user, new_balance)
+                novo_saldo = saldo_atual + valor
+                atualizar_saldo(usuario, novo_saldo)
                 print('\nDepósito concluído com sucesso.\n')
                 break
             else:
@@ -107,8 +107,8 @@ def deposit(user):
         except ValueError:
             print('\nValor inválido. Por favor, digite um número.\n')
 
-def withdraw(user):
-    current_balance = get_balance(user)
+def saque(usuario):
+    saldo_atual = obter_saldo(usuario)
     while True:
         try:
             valor = float(input('Digite o valor de saque: '))
@@ -118,14 +118,14 @@ def withdraw(user):
             if valor > 5000:
                 print('\nO valor é superior ao limite de R$ 5.000. Tente novamente\n')
                 continue
-            if valor > current_balance:
+            if valor > saldo_atual:
                 print('\nSaldo insuficiente\n')
                 continue
             
             confirmacao = input('Deseja continuar? (S/N): ').upper().strip()
             if confirmacao == 'S':
-                new_balance = current_balance - valor
-                update_balance(user, new_balance)
+                novo_saldo = saldo_atual - valor
+                atualizar_saldo(usuario, novo_saldo)
                 print('\nSaque concluído com sucesso\n')
                 break
             else:
@@ -134,13 +134,13 @@ def withdraw(user):
         except ValueError:
             print('\nValor inválido. Por favor, digite um número.\n')
 
-def transfer(user):
-    current_balance = get_balance(user)
-    user_data = load_account_data()
+def transferencia(usuario):
+    saldo_atual = obter_saldo(usuario)
+    dados_conta = carregar_dados_conta()
     while True:
         try:
             destinatario = int(input('Digite o usuário destinatário: '))
-            if destinatario not in user_data['Usuário'].values:
+            if destinatario not in dados_conta['Usuário'].values:
                 print('\nUsuário não encontrado\n')
                 continue
             
@@ -151,16 +151,16 @@ def transfer(user):
             if valor > 5000:
                 print('\nO valor é superior ao limite de R$ 5.000. Tente novamente.\n')
                 continue
-            if valor > current_balance:
+            if valor > saldo_atual:
                 print('\nSaldo insuficiente\n')
                 continue
             
             confirmacao = input('Deseja confirmar? (S/N): ').upper().strip()
             if confirmacao == 'S':
-                new_balance_sender = current_balance - valor
-                new_balance_receiver = get_balance(destinatario) + valor
-                update_balance(user, new_balance_sender)
-                update_balance(destinatario, new_balance_receiver)
+                novo_saldo_remetente = saldo_atual - valor
+                novo_saldo_receptor = obter_saldo(destinatario) + valor
+                atualizar_saldo(usuario, novo_saldo_remetente)
+                atualizar_saldo(destinatario, novo_saldo_receptor)
                 print('\nTransferência concluída com sucesso\n')
                 break
             else:
@@ -171,7 +171,7 @@ def transfer(user):
 
 def main():
     try:
-        user = login()
+        usuario = login()
         while True:
             try:
                 print('---------------------')
@@ -185,13 +185,13 @@ def main():
                 menu = int(input('  Digite uma opção: '))
                 
                 if menu == 1:
-                    print(f' - Saldo: R$ {get_balance(user):.2f}\n')
+                    print(f' - Saldo: R$ {obter_saldo(usuario):.2f}\n')
                 elif menu == 2:
-                    deposit(user)
+                    deposito(usuario)
                 elif menu == 3:
-                    withdraw(user)
+                    saque(usuario)
                 elif menu == 4:
-                    transfer(user)
+                    transferencia(usuario)
                 elif menu == 5:
                     print("Obrigado por usar o FlaBank's. Até logo!")
                     break
